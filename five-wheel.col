@@ -1,4 +1,5 @@
 c Wheel graph with five perimeter nodes.
+c Requires four colors.
 p edge 6 20
 e 0 1
 e 0 2
