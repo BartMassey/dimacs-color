@@ -55,11 +55,9 @@ fn color_dfs(
     k: u64,
     colored: &mut Coloring,
 ) -> Option<Coloring> {
-    let (next_node, color_order) = if colored.is_empty() {
-        let next_node =
-            graph.keys().cloned().max_by_key(|n| graph[n].len());
-        let color_order: Vec<u64> = (0..k).collect();
-        (next_node, color_order)
+    let mut color_order: Vec<u64> = (0..k).collect();
+    let next_node = if colored.is_empty() {
+        graph.keys().cloned().max_by_key(|n| graph[n].len())
     } else {
         let mut frontier: HashSet<u64> = HashSet::new();
         for ck in colored.keys() {
@@ -86,11 +84,10 @@ fn color_dfs(
             }
             (neighbor_colors.len(), reduced_degree)
         });
-        let mut color_order: Vec<u64> = (0..k).collect();
-        color_order.sort_unstable_by_key(|c| {
+        color_order.sort_by_key(|c| {
             (Reverse(color_counts.get(c)), *c)
         });
-        (next_node, color_order)
+        next_node
     };
     if let Some(node) = next_node {
         assert!(!colored.contains_key(&node));
