@@ -107,25 +107,24 @@ fn main() {
     let k: u64 = argv[1].parse().unwrap();
     let filename = &argv[2];
     let f = File::open(filename).unwrap();
-    let mut graph = read_graph(f);
+    let graph = read_graph(f);
 
     let components = connected_components(&graph);
     if components.len() > 1 {
-        let big_c =
-            components.into_iter().max_by_key(|c| c.len()).unwrap();
-        eprintln!(
-            "warning: choosing a largest component (size {}) to color",
-            big_c.len(),
-        );
-        graph = big_c;
+        eprintln!("warning: coloring multiple components");
     }
 
-    let mut coloring = HashMap::new();
-    if let Some(colors) = color_dfs(&graph, k, &mut coloring) {
-        for (n, c) in colors {
-            println!("{}: {}", n, c);
+    let mut full_coloring = HashMap::new();
+    for graph in &components {
+        let mut coloring = HashMap::new();
+        if let Some(colors) = color_dfs(&graph, k, &mut coloring) {
+            full_coloring.extend(colors);
+        } else {
+            println!("no {}-coloring", k);
+            return;
         }
-    } else {
-        println!("no {}-coloring", k);
+    }
+    for (n, c) in full_coloring {
+        println!("{}: {}", n, c);
     }
 }
