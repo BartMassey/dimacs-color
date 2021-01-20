@@ -22,14 +22,29 @@ fn find_component(
     }
 }
 
-fn connected_components(graph: &Graph) -> Vec<HashSet<u64>> {
+fn connected_components(graph: &Graph) -> Vec<Graph> {
     let mut open: HashSet<u64> = graph.keys().cloned().collect();
-    let mut result = Vec::new();
+    let mut components = Vec::new();
 
     while let Some(root) = open.iter().cloned().min() {
         let mut closed = HashSet::new();
         find_component(graph, &mut open, &mut closed, root);
-        result.push(closed);
+        components.push(closed);
+    }
+    let mut result = Vec::new();
+    for c in &components {
+        let new_graph: HashMap<u64, HashSet<u64>> = c
+            .iter()
+            .map(|n| {
+                let neighbors: HashSet<u64> = graph[n]
+                    .iter()
+                    .filter(|&ne| c.contains(ne))
+                    .cloned()
+                    .collect();
+                (*n, neighbors)
+            })
+            .collect();
+        result.push(new_graph);
     }
     result
 }
@@ -99,23 +114,12 @@ fn main() {
 
     let components = connected_components(&graph);
     if components.len() > 1 {
-        let big_c = components.iter().max_by_key(|c| c.len()).unwrap();
+        let big_c = components.into_iter().max_by_key(|c| c.len()).unwrap();
         eprintln!(
             "warning: choosing a largest component (size {}) to color",
             big_c.len(),
         );
-        let new_graph: HashMap<u64, HashSet<u64>> = big_c
-            .iter()
-            .map(|n| {
-                let neighbors: HashSet<u64> = graph[n]
-                    .iter()
-                    .filter(|&ne| big_c.contains(ne))
-                    .cloned()
-                    .collect();
-                (*n, neighbors)
-            })
-            .collect();
-        graph = new_graph;
+        graph = big_c;
     }
 
     let mut coloring = HashMap::new();
