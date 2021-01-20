@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
@@ -54,8 +55,11 @@ fn color_dfs(
     k: u64,
     colored: &mut Coloring,
 ) -> Option<Coloring> {
-    let next_node = if colored.is_empty() {
-        graph.keys().cloned().max_by_key(|n| graph[n].len())
+    let (next_node, color_order) = if colored.is_empty() {
+        let next_node =
+            graph.keys().cloned().max_by_key(|n| graph[n].len());
+        let color_order: Vec<u64> = (0..k).collect();
+        (next_node, color_order)
     } else {
         let mut frontier: HashSet<u64> = HashSet::new();
         for ck in colored.keys() {
@@ -65,7 +69,8 @@ fn color_dfs(
                 }
             }
         }
-        frontier.into_iter().max_by_key(|n| {
+        let mut color_counts = HashMap::new();
+        let next_node = frontier.into_iter().max_by_key(|n| {
             let mut neighbor_colors = HashSet::new();
             let mut reduced_degree = 0;
             for ne in &graph[&n] {
@@ -75,8 +80,17 @@ fn color_dfs(
                     reduced_degree += 1;
                 }
             }
+            for &c in &neighbor_colors {
+                let counter = color_counts.entry(c).or_insert(0);
+                *counter += 1;
+            }
             (neighbor_colors.len(), reduced_degree)
-        })
+        });
+        let mut color_order: Vec<u64> = (0..k).collect();
+        color_order.sort_unstable_by_key(|c| {
+            (Reverse(color_counts.get(c)), *c)
+        });
+        (next_node, color_order)
     };
     if let Some(node) = next_node {
         assert!(!colored.contains_key(&node));
@@ -85,7 +99,7 @@ fn color_dfs(
             .filter_map(|n| colored.get(n))
             .cloned()
             .collect();
-        for c in 0..k {
+        for c in color_order {
             if used.contains(&c) {
                 continue;
             }
