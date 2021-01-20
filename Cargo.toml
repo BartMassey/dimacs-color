@@ -5,5 +5,6 @@ authors = ["Bart Massey <bart.massey@gmail.com>"]
 edition = "2018"
 
 [dependencies.dimacs-graph]
-path = "../dimacs-graph"
+git = "http://github.com/BartMassey/dimacs-graph"
+branch = "main"
 version = "*"
