@@ -1,0 +1,9 @@
+[package]
+name = "dimacs-color"
+version = "0.1.0"
+authors = ["Bart Massey <bart.massey@gmail.com>"]
+edition = "2018"
+
+[dependencies.dimacs-graph]
+path = "../dimacs-graph"
+version = "*"
