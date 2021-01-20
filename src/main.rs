@@ -1,4 +1,3 @@
-use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
@@ -44,7 +43,7 @@ fn color_dfs(
         graph
             .keys()
             .cloned()
-            .max_by_key(|n| Reverse(graph[n].len()))
+            .max_by_key(|n| graph[n].len())
     } else {
         let mut frontier: HashSet<u64> = HashSet::new();
         for ck in colored.keys() {
@@ -64,7 +63,7 @@ fn color_dfs(
                     reduced_degree += 1;
                 }
             }
-            (Reverse(neighbor_colors.len()), Reverse(reduced_degree))
+            (neighbor_colors.len(), reduced_degree)
         })
     };
     if let Some(node) = next_node {
