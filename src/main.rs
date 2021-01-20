@@ -55,10 +55,7 @@ fn color_dfs(
     colored: &mut Coloring,
 ) -> Option<Coloring> {
     let next_node = if colored.is_empty() {
-        graph
-            .keys()
-            .cloned()
-            .max_by_key(|n| graph[n].len())
+        graph.keys().cloned().max_by_key(|n| graph[n].len())
     } else {
         let mut frontier: HashSet<u64> = HashSet::new();
         for ck in colored.keys() {
@@ -114,7 +111,8 @@ fn main() {
 
     let components = connected_components(&graph);
     if components.len() > 1 {
-        let big_c = components.into_iter().max_by_key(|c| c.len()).unwrap();
+        let big_c =
+            components.into_iter().max_by_key(|c| c.len()).unwrap();
         eprintln!(
             "warning: choosing a largest component (size {}) to color",
             big_c.len(),
