@@ -10,4 +10,4 @@ dependencies = [
 [[package]]
 name = "dimacs-graph"
 version = "0.1.0"
-source = "git+http://github.com/BartMassey/dimacs-graph?branch=main#810ca39024050d64ab2a5b0bf37a17254f121192"
+source = "git+http://github.com/BartMassey/dimacs-graph?branch=main#94935cf3c48cdfd5da397121a62b9ae5f581f9c9"

@@ -7,6 +7,34 @@ use dimacs_graph::*;
 
 type Coloring = HashMap<u64, u64>;
 
+fn find_component(
+    graph: &Graph,
+    open: &mut HashSet<u64>,
+    closed: &mut HashSet<u64>,
+    root: u64,
+) {
+    if closed.insert(root) {
+        for &n in &graph[&root] {
+            find_component(graph, open, closed, n);
+        }
+    }
+    for n in closed.iter() {
+        open.remove(n);
+    }
+}
+
+fn connected_components(graph: &Graph) -> Vec<HashSet<u64>> {
+    let mut open: HashSet<u64> = graph.keys().cloned().collect();
+    let mut result = Vec::new();
+
+    while let Some(root) = open.iter().cloned().min() {
+        let mut closed = HashSet::new();
+        find_component(graph, &mut open, &mut closed, root);
+        result.push(closed);
+    }
+    result
+}
+
 fn color_dfs(
     graph: &Graph,
     k: u64,
@@ -68,7 +96,29 @@ fn main() {
     let k: u64 = argv[1].parse().unwrap();
     let filename = &argv[2];
     let f = File::open(filename).unwrap();
-    let graph = read_graph(f);
+    let mut graph = read_graph(f);
+
+    let components = connected_components(&graph);
+    if components.len() > 1 {
+        let big_c = components.iter().max_by_key(|c| c.len()).unwrap();
+        eprintln!(
+            "warning: choosing a largest component (size {}) to color",
+            big_c.len(),
+        );
+        let new_graph: HashMap<u64, HashSet<u64>> = big_c
+            .iter()
+            .map(|n| {
+                let neighbors: HashSet<u64> = graph[n]
+                    .iter()
+                    .filter(|&ne| big_c.contains(ne))
+                    .cloned()
+                    .collect();
+                (*n, neighbors)
+            })
+            .collect();
+        graph = new_graph;
+    }
+
     let mut coloring = HashMap::new();
     if let Some(colors) = color_dfs(&graph, k, &mut coloring) {
         for (n, c) in colors {
