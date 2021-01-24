@@ -50,6 +50,31 @@ fn connected_components(graph: &Graph) -> Vec<Graph> {
     result
 }
 
+fn prune_degree(graph: &Graph, k: u64) -> Vec<Graph> {
+    let ok_deg: HashSet<u64> = graph
+        .iter()
+        .filter_map(|(n, nes)| {
+            if nes.len() >= k as usize {
+                Some(*n)
+            } else {
+                None
+            }
+        })
+        .collect();
+    let ok_graph: Graph = graph
+        .iter()
+        .filter(|(n, _)| ok_deg.contains(n))
+        .map(|(n, nes)| {
+            let ndeg: HashSet<u64> = nes
+                .intersection(&ok_deg)
+                .cloned()
+                .collect();
+            (*n, ndeg)
+        })
+        .collect();
+    connected_components(&ok_graph)
+}
+
 fn color_dfs(
     graph: &Graph,
     k: u64,
@@ -120,10 +145,7 @@ fn main() {
     let f = File::open(filename).unwrap();
     let graph = read_graph(f);
 
-    let components = connected_components(&graph);
-    if components.len() > 1 {
-        eprintln!("warning: coloring multiple components");
-    }
+    let components = prune_degree(&graph, k);
 
     let mut full_coloring = HashMap::new();
     for graph in &components {
