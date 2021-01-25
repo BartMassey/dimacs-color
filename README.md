@@ -16,7 +16,8 @@ is selected for coloring.
 The current approach is DFS with variable-ordering and
 value-ordering heuristics. Variable ordering chooses a node
 with the largest number of neighbor colors, breaking ties by
-choosing a highest reduced degree (degree discounting
-colored neighbors) node. Value ordering is by decreasing
-number of frontier nodes with given neighbor color, ties
-broken in priority order.
+choosing nodes with the most colored neighbors and then by
+choosing nodes with highest reduced degree (degree
+discounting colored neighbors) node. Value ordering is by
+decreasing number of frontier nodes with given neighbor
+color, ties broken in priority order.
