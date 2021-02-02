@@ -93,21 +93,25 @@ fn color_dfs(
             }
         }
         let mut color_counts = HashMap::new();
-        let next_node = frontier.into_iter().max_by_key(|n| {
+        let mut stats = |n| {
             let mut neighbor_colors = HashSet::new();
             let mut colored_neighbors = 0;
-            let mut reduced_degree = 0;
             for ne in &graph[&n] {
                 if let Some(c) = colored.get(&ne) {
                     neighbor_colors.insert(c);
                     colored_neighbors += 1;
                     let counter = color_counts.entry(c).or_insert(0);
                     *counter += 1;
-                } else {
-                    reduced_degree += 1;
                 }
             }
-            (neighbor_colors.len(), colored_neighbors, reduced_degree, *n)
+            (neighbor_colors, colored_neighbors)
+        };
+        let next_node = frontier.into_iter().max_by_key(|n| {
+            let nneighbors = graph[n].len();
+            let (neighbor_colors, colored_neighbors) = stats(*n);
+            let ncolors = neighbor_colors.len();
+            let reduced_degree = nneighbors - colored_neighbors;
+            (ncolors, colored_neighbors, reduced_degree, *n)
         });
         color_order.sort_unstable_by_key(|c| {
             (Reverse(color_counts.get(c)), *c)
@@ -125,6 +129,16 @@ fn color_dfs(
             if used.contains(&c) {
                 continue;
             }
+            /* 
+            let forward_prune = graph[&node]
+                .iter()
+                .filter_map(|n| {
+                    if used.contains(n) {
+                        return None;
+                    }
+                    
+                });
+            */
             colored.insert(node, c);
             let coloring = color_dfs(graph, k, colored);
             if coloring.is_some() {
