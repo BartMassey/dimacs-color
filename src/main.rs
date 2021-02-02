@@ -107,9 +107,9 @@ fn color_dfs(
                     reduced_degree += 1;
                 }
             }
-            (neighbor_colors.len(), colored_neighbors, reduced_degree)
+            (neighbor_colors.len(), colored_neighbors, reduced_degree, *n)
         });
-        color_order.sort_by_key(|c| {
+        color_order.sort_unstable_by_key(|c| {
             (Reverse(color_counts.get(c)), *c)
         });
         next_node
