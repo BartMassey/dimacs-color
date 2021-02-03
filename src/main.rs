@@ -137,9 +137,9 @@ fn color_dfs(
             }
             let forward_prune = graph[&node]
                 .iter()
-                .all(|n| {
+                .any(|n| {
                     if colored.contains_key(n) {
-                        return true;
+                        return false;
                     }
                     let (mut neighbor_colors, _) = stats(*n, colored);
                     neighbor_colors.insert(c);
