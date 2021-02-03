@@ -1,9 +1,24 @@
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::fs::File;
 
+use gumdrop::Options;
+use once_cell::sync::Lazy;
+
 use dimacs_graph::*;
+
+#[derive(Options)]
+struct Args {
+    #[options(free)]
+    free: Vec<String>,
+
+    #[options(help = "depth 1 forward-prune")]
+    forward_prune: bool,
+}
+
+static ARGS: Lazy<Args> = Lazy::new(
+    Args::parse_args_default_or_exit
+);
 
 type Coloring = HashMap<u64, u64>;
 
@@ -135,18 +150,20 @@ fn color_dfs(
             if used.contains(&c) {
                 continue;
             }
-            let forward_prune = graph[&node]
-                .iter()
-                .any(|n| {
-                    if colored.contains_key(n) {
-                        return false;
-                    }
-                    let (mut neighbor_colors, _) = stats(*n, colored);
-                    neighbor_colors.insert(c);
-                    (neighbor_colors.len() as u64) >= k
-                });
-            if forward_prune {
-                continue;
+            if ARGS.forward_prune {
+                let forward_prune = graph[&node]
+                    .iter()
+                    .any(|n| {
+                        if colored.contains_key(n) {
+                            return false;
+                        }
+                        let (mut neighbor_colors, _) = stats(*n, colored);
+                        neighbor_colors.insert(c);
+                        (neighbor_colors.len() as u64) >= k
+                    });
+                if forward_prune {
+                    continue;
+                }
             }
             colored.insert(node, c);
             let coloring = color_dfs(graph, k, colored);
@@ -162,9 +179,8 @@ fn color_dfs(
 }
 
 fn main() {
-    let argv: Vec<String> = env::args().collect();
-    let k: u64 = argv[1].parse().unwrap();
-    let filename = &argv[2];
+    let k: u64 = ARGS.free[0].parse().unwrap();
+    let filename = &ARGS.free[1];
     let f = File::open(filename).unwrap();
     let graph = read_graph(f);
 
