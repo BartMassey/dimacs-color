@@ -8,12 +8,27 @@ use once_cell::sync::Lazy;
 use dimacs_graph::*;
 
 #[derive(Options)]
-struct Args {
-    #[options(free)]
-    free: Vec<String>,
-
+struct DFSArgs {
     #[options(help = "depth 1 forward-prune")]
     forward_prune: bool,
+}
+
+#[derive(Options)]
+enum SearchArgs {
+    #[options(help = "depth-first search", name = "dfs")]
+    DFS(DFSArgs),
+}
+
+#[derive(Options)]
+struct Args {
+    #[options(help = "number of colors")]
+    k: u64,
+
+    #[options(help = "graph file")]
+    filename: String,
+
+    #[options(command)]
+    search: Option<SearchArgs>,
 }
 
 static ARGS: Lazy<Args> = Lazy::new(
@@ -94,6 +109,7 @@ fn color_dfs(
     graph: &Graph,
     k: u64,
     colored: &mut Coloring,
+    forward_prune: bool,
 ) -> Option<Coloring> {
     let stats = |n, colored: &Coloring| {
         let mut neighbor_colors = HashSet::new();
@@ -150,8 +166,8 @@ fn color_dfs(
             if used.contains(&c) {
                 continue;
             }
-            if ARGS.forward_prune {
-                let forward_prune = graph[&node]
+            if forward_prune {
+                let prune_here = graph[&node]
                     .iter()
                     .any(|n| {
                         if colored.contains_key(n) {
@@ -161,12 +177,12 @@ fn color_dfs(
                         neighbor_colors.insert(c);
                         (neighbor_colors.len() as u64) >= k
                     });
-                if forward_prune {
+                if prune_here {
                     continue;
                 }
             }
             colored.insert(node, c);
-            let coloring = color_dfs(graph, k, colored);
+            let coloring = color_dfs(graph, k, colored, forward_prune);
             if coloring.is_some() {
                 return coloring;
             }
@@ -179,8 +195,8 @@ fn color_dfs(
 }
 
 fn main() {
-    let k: u64 = ARGS.free[0].parse().unwrap();
-    let filename = &ARGS.free[1];
+    let k = ARGS.k;
+    let filename = &ARGS.filename;
     let f = File::open(filename).unwrap();
     let graph = read_graph(f);
 
@@ -189,7 +205,13 @@ fn main() {
     let mut full_coloring = HashMap::new();
     for graph in &components {
         let mut coloring = HashMap::new();
-        if let Some(colors) = color_dfs(&graph, k, &mut coloring) {
+        let result = match ARGS.search.as_ref() {
+            None => 
+                color_dfs(&graph, k, &mut coloring, false),
+            Some(SearchArgs::DFS(args)) => 
+                color_dfs(&graph, k, &mut coloring, args.forward_prune),
+        };
+        if let Some(colors) = result {
             full_coloring.extend(colors);
         } else {
             println!("no {}-coloring", k);
