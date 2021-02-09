@@ -36,6 +36,9 @@ struct Args {
     #[options(help = "graph file")]
     filename: String,
 
+    #[options(help = "report statistics as we go")]
+    log: bool,
+
     #[options(command)]
     search: Option<SearchArgs>,
 }
@@ -214,7 +217,7 @@ fn color_local(
         let color = rng.gen_range(0..k);
         colored.insert(*g, color);
     }
-    for _ in 0..flips {
+    for flip in 0..flips {
         let mut conflicts = HashMap::new();
         for (n, neighbors) in graph {
             for neighbor in neighbors {
@@ -226,6 +229,9 @@ fn color_local(
         }
         if conflicts.is_empty() {
             return Some(colored.clone());
+        }
+        if flip % 10000 == 0 && ARGS.log {
+            eprintln!("flips: {}, conflicts: {}", flip, conflicts.len());
         }
         let mut conflicts: Vec<(&u64, usize)> =
             conflicts.into_iter().collect();
