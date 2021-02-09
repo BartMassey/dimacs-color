@@ -4,6 +4,7 @@ use std::fs::File;
 
 use gumdrop::Options;
 use once_cell::sync::Lazy;
+use rand::prelude::*;
 
 use dimacs_graph::*;
 
@@ -14,9 +15,17 @@ struct DFSArgs {
 }
 
 #[derive(Options)]
+struct LocalArgs {
+    #[options(help = "Max flips per run.")]
+    flips: Option<usize>,
+}
+
+#[derive(Options)]
 enum SearchArgs {
     #[options(help = "depth-first search", name = "dfs")]
     DFS(DFSArgs),
+    #[options(help = "local search", name = "local")]
+    Local(LocalArgs),
 }
 
 #[derive(Options)]
@@ -194,6 +203,53 @@ fn color_dfs(
     }
 }
 
+fn color_local(
+    graph: &Graph,
+    k: u64,
+    colored: &mut Coloring,
+    flips: usize,
+) -> Option<Coloring> {
+    let mut rng = thread_rng();
+    for g in graph.keys() {
+        let color = rng.gen_range(0..k);
+        colored.insert(*g, color);
+    }
+    for _ in 0..flips {
+        let mut conflicts = HashMap::new();
+        for (n, neighbors) in graph {
+            for neighbor in neighbors {
+                if colored[n] == colored[neighbor] {
+                    let e = conflicts.entry(n).or_insert(0);
+                    *e += 1;
+                }
+            }
+        }
+        if conflicts.is_empty() {
+            return Some(colored.clone());
+        }
+        let mut conflicts: Vec<(&u64, usize)> =
+            conflicts.into_iter().collect();
+        let n = if rng.gen_range(0..2) == 0 {
+            *conflicts[rng.gen_range(0..conflicts.len())].0
+        } else {
+            conflicts.shuffle(&mut rng);
+            *conflicts.iter().max_by_key(|cf| cf.1).unwrap().0
+        };
+        let mut free: HashSet<u64> = (0..k).collect();
+        for neighbor in &graph[&n] {
+            free.remove(neighbor);
+        }
+        let c = if free.is_empty() {
+            rng.gen_range(0..k)
+        } else {
+            let c = rng.gen_range(0..free.len());
+            *free.iter().nth(c).unwrap()
+        };
+        colored.insert(n, c);
+    }
+    None
+}
+
 fn main() {
     let k = ARGS.k;
     let filename = &ARGS.filename;
@@ -210,6 +266,10 @@ fn main() {
                 color_dfs(&graph, k, &mut coloring, false),
             Some(SearchArgs::DFS(args)) => 
                 color_dfs(&graph, k, &mut coloring, args.forward_prune),
+            Some(SearchArgs::Local(args)) => {
+                let flips = args.flips.unwrap_or(100_000);
+                color_local(&graph, k, &mut coloring, flips)
+            }
         };
         if let Some(colors) = result {
             full_coloring.extend(colors);
