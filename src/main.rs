@@ -284,6 +284,15 @@ fn color_residue(
     }
 }
 
+fn check_coloring(graph: &Graph, coloring: &Coloring) {
+    for (n, neighbors) in graph {
+        let c = coloring[n];
+        for ne in neighbors {
+            assert!(c != coloring[ne]);
+        }
+    }
+}
+
 fn main() {
     let k = ARGS.k;
     let filename = &ARGS.filename;
@@ -313,6 +322,7 @@ fn main() {
         }
     }
     color_residue(&graph, &residue, &mut full_coloring);
+    check_coloring(&graph, &full_coloring);
     let mut full_coloring: Vec<_> = full_coloring.iter().collect();
     full_coloring.sort_unstable_by_key(|(&n, _)| n);
     for (n, c) in full_coloring {
