@@ -92,29 +92,40 @@ fn connected_components(graph: &Graph) -> Vec<Graph> {
     result
 }
 
-fn prune_degree(graph: &Graph, k: u64) -> Vec<Graph> {
-    let ok_deg: HashSet<u64> = graph
-        .iter()
-        .filter_map(|(n, nes)| {
-            if nes.len() >= k as usize {
-                Some(*n)
-            } else {
-                None
-            }
-        })
-        .collect();
-    let ok_graph: Graph = graph
-        .iter()
-        .filter(|(n, _)| ok_deg.contains(n))
-        .map(|(n, nes)| {
-            let ndeg: HashSet<u64> = nes
-                .intersection(&ok_deg)
-                .cloned()
-                .collect();
-            (*n, ndeg)
-        })
-        .collect();
-    connected_components(&ok_graph)
+fn prune_degree(graph: &Graph, k: u64) -> (Vec<Graph>, HashSet<u64>) {
+    let mut ok_graph = graph.clone();
+    let mut pruned_nodes = HashSet::new();
+    loop {
+        let mut pruned = false;
+        let ok_deg: HashSet<u64> = ok_graph
+            .iter()
+            .filter_map(|(n, nes)| {
+                if nes.len() >= k as usize {
+                    Some(*n)
+                } else {
+                    pruned_nodes.insert(*n);
+                    pruned = true;
+                    None
+                }
+            })
+            .collect();
+        if !pruned {
+            break;
+        }
+        let next_graph: Graph = ok_graph
+            .iter()
+            .filter(|(n, _)| ok_deg.contains(n))
+            .map(|(n, nes)| {
+                let ndeg: HashSet<u64> = nes
+                    .intersection(&ok_deg)
+                    .cloned()
+                    .collect();
+                (*n, ndeg)
+            })
+            .collect();
+        ok_graph = next_graph;
+    };
+    (connected_components(&ok_graph), pruned_nodes)
 }
 
 fn color_dfs(
@@ -256,13 +267,30 @@ fn color_local(
     None
 }
 
+fn color_residue(
+    graph: &Graph,
+    residue: &HashSet<u64>,
+    colored: &mut Coloring,
+) {
+    for n in residue {
+        let mut colors: HashSet<u64> = (0..ARGS.k).collect();
+        for ne in &graph[n] {
+            if let Some(c) = colored.get(ne) {
+                colors.remove(c);
+            }
+        }
+        let c = *colors.iter().next().unwrap();
+        colored.insert(*n, c);
+    }
+}
+
 fn main() {
     let k = ARGS.k;
     let filename = &ARGS.filename;
     let f = File::open(filename).unwrap();
     let graph = read_graph(f);
 
-    let components = prune_degree(&graph, k);
+    let (components, residue) = prune_degree(&graph, k);
 
     let mut full_coloring = HashMap::new();
     for graph in &components {
@@ -284,6 +312,9 @@ fn main() {
             return;
         }
     }
+    color_residue(&graph, &residue, &mut full_coloring);
+    let mut full_coloring: Vec<_> = full_coloring.iter().collect();
+    full_coloring.sort_unstable_by_key(|(&n, _)| n);
     for (n, c) in full_coloring {
         println!("{}: {}", n, c);
     }
