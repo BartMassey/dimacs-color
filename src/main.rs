@@ -92,9 +92,9 @@ fn connected_components(graph: &Graph) -> Vec<Graph> {
     result
 }
 
-fn prune_degree(graph: &Graph, k: u64) -> (Vec<Graph>, HashSet<u64>) {
+fn prune_degree(graph: &Graph, k: u64) -> (Vec<Graph>, Vec<u64>) {
     let mut ok_graph = graph.clone();
-    let mut pruned_nodes = HashSet::new();
+    let mut pruned_nodes = Vec::new();
     loop {
         let mut pruned = false;
         let ok_deg: HashSet<u64> = ok_graph
@@ -103,7 +103,7 @@ fn prune_degree(graph: &Graph, k: u64) -> (Vec<Graph>, HashSet<u64>) {
                 if nes.len() >= k as usize {
                     Some(*n)
                 } else {
-                    pruned_nodes.insert(*n);
+                    pruned_nodes.push(*n);
                     pruned = true;
                     None
                 }
@@ -269,18 +269,18 @@ fn color_local(
 
 fn color_residue(
     graph: &Graph,
-    residue: &HashSet<u64>,
+    mut residue: Vec<u64>,
     colored: &mut Coloring,
 ) {
-    for n in residue {
+    while let Some(n) = residue.pop() {
         let mut colors: HashSet<u64> = (0..ARGS.k).collect();
-        for ne in &graph[n] {
+        for ne in &graph[&n] {
             if let Some(c) = colored.get(ne) {
                 colors.remove(c);
             }
         }
         let c = *colors.iter().next().unwrap();
-        colored.insert(*n, c);
+        colored.insert(n, c);
     }
 }
 
@@ -298,11 +298,23 @@ fn main() {
     let filename = &ARGS.filename;
     let f = File::open(filename).unwrap();
     let graph = read_graph(f);
+    if ARGS.log {
+        eprintln!("coloring graph of {} nodes", graph.len());
+    }
 
     let (components, residue) = prune_degree(&graph, k);
 
     let mut full_coloring = HashMap::new();
     for graph in &components {
+        let min_degree = graph.values().map(|ne| ne.len()).min().unwrap();
+        assert!(min_degree >= k as usize);
+        if ARGS.log {
+            eprintln!(
+                "coloring component of {} nodes, min-degree {}",
+                graph.len(),
+                min_degree,
+            );
+        }
         let mut coloring = HashMap::new();
         let result = match ARGS.search.as_ref() {
             None => 
@@ -321,7 +333,7 @@ fn main() {
             return;
         }
     }
-    color_residue(&graph, &residue, &mut full_coloring);
+    color_residue(&graph, residue, &mut full_coloring);
     check_coloring(&graph, &full_coloring);
     let mut full_coloring: Vec<_> = full_coloring.iter().collect();
     full_coloring.sort_unstable_by_key(|(&n, _)| n);
